@@ -11,4 +11,4 @@ Local DataBase: SQLite3
 
 @Project: 產品分類的優化項目以及用戶搜尋商品的快捷鍵(LINE-Front-End-Framework)
 
-@Owner: Steven Tseng - Data Analyst
+@Owner: Steven Tseng - Data Analyst at LINE Corp
