@@ -1,11 +1,18 @@
 '''
-    local updated !!! 
+    Project: LINE Internal Hackathon Compeition
+    Stakeholder: Steven Tseng
+                    Tony Yen
+                    Alicia Chen
+                    Evelyn Hsiao
+                    David Lee
+
+    Overview: Assisting LINE users to locate their intend purchasing items 
+    LINE Bot: Deployed on local environment
 
 '''
 import sqlite3
 import requests
 import random
-from ga import main as m1
 from flask import Flask, request, abort
 
 from linebot import (
@@ -29,14 +36,16 @@ import datetime
 import os.path
 from os import path
 import os 
+import requests 
 
-
-
+'''
+    Developing Web structure using Flask
+'''
 
 app = Flask(__name__)
-
 line_bot_api = LineBotApi('k/jYg6OB/x9USD5owDtBubPdyD4IqSloC5o7BsuiCeKf1FXV1SZE88wCKhPJDAMLEFAaTsRT0MR8v8zyKi4JKq170lJc6iKgvL4vt32FatLQQPT1VUDLTf3vcZyvJJuVqy+qbkSruRHYIFZrNV9/DwdB04t89/1O/w1cDnyilFU=')
 handler = WebhookHandler('beffee348122312dd9435b3214ac39f9')
+headers = {'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'}
 
 
 @app.route("/callback", methods=['POST'])
@@ -57,7 +66,23 @@ def callback():
     return 'OK'
 
 
-
+def top_item():
+    ls_url = "https://buy.line.me/daily"
+    r = requests.get(ls_url,headers=headers)
+    soup = BeautifulSoup(r.content,'lxml')
+    df = {'price':[],'item':[],'provider':[],'line point':[]}
+    tag = soup.find("ul",class_="thumbnails1-list").find_all("li",class_="thumbnails1-item")
+    for t in tag:
+        
+        try:
+            df['price'].append(t.find("span",class_="heading-thumbnailPrice").text)
+        except:
+            df['price'].append(t.find("span",class_="thumbnails-PriceDiscounted heading-thumbnailPriceDiscounted").text)
+        df['item'].append(t.find("div",class_="thumbnails1-description heading-thumbnailDescription").text)        
+        df['provider'].append(t.find("div",class_="thumbnails1-hVendor").text)
+        df['line point'].append(t.find("div",class_="heading-thumbnailPoint thumbnails1-point").text)
+    df = pd.DataFrame(df)
+    return df
 
 
 def insert_db(message,id_):
@@ -74,7 +99,10 @@ def insert_db(message,id_):
     connection.commit()
     connection.close()
 
+'''
+    Handling message sent by the users
 
+'''
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     
@@ -84,56 +112,35 @@ def handle_message(event):
     
     if event.message.text =="嗨":
         
-        msg = "哈囉,請問是哪個單位的呢？"
+        msg = "哈囉,請問需要幫你找什麼嗎？"
         line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=msg))
     
-    elif event.message.text == "測試":
-        
-        
-        msg = date_+"\n測試正常"
+    elif event.message.text == "今日熱銷是什麼":
+        df = top_item()
+        i = 1
+        msg=""
+        for p,item,provider,point in zip(df['price'],df['item'],df['provider'],df['line point']):
+            msg += "今日熱銷品 top-"+str(i)+"\n價格: "+p+"\n品名: "+item+"\n廠商: "+provider+"\n回饋 LINE Point: "+point+"\n\n"
+            i+=1
         line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=msg))
+            event.reply_token,
+            TextSendMessage(text=msg))
         
-    elif event.message.text == "ecmk" or event.message.text=="ECMK":
-        
-        
-        msg = "好的 MK的夥伴想知道什麼?"
-        line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=msg))
+            
+
     
-    elif event.message.text == "今天購物的數據":
-        try:
-            
-            df = m1()
-            
-            bounces = df.iloc[0,1]
-            new_user = df.iloc[0,2]
-            users = df.iloc[0,4]
-            bounce_rate = str(round(float(df.iloc[0,6])))+"%"
-            msg = "今天的 Bounces 是: "+bounces+"\nBounces Rate 是: "+bounce_rate+"\nNew Users 是: "+new_user+"\nUsers 是: "+users
-           
-            
-            line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=msg))
-            
-            
-            
-        except:
-            msg = "connect failed !!"
-            line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=msg))
             
     else:
-        msg = "我不明白你的意思,你是說"+event.message.text+"?"
+        msg = "不好意思 我不明白你的意思,你是說 "+event.message.text+"?"
         line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=msg))
+
+
+
+
 
 
 @handler.add(MessageEvent, message=StickerMessage)

@@ -1,0 +1,5 @@
+串接 LINE Bot 到後端DB的時候
+出現 Error id : Udeadbeefdeadbeefdeadbeefdeadbeef
+	Message : hello world 
+
+
